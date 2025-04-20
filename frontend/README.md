@@ -1,70 +1,75 @@
-# Getting Started with Create React App
+# ProtocolManager Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This React application manages insurance company branches, allowing users to view, create, edit, and delete branch information.
+
+## Project Structure
+
+```
+frontend/
+├── public/
+├── src/
+│   ├── components/      # Reusable UI components
+│   ├── pages/           # Page components like Branches.tsx
+│   ├── services/        # API services like branchService.ts
+│   ├── types/           # TypeScript type definitions
+│   ├── App.tsx          # Main application component
+│   └── index.tsx        # Application entry point
+├── .env                 # Environment variables
+└── package.json         # Project dependencies
+```
+
+## Setup and Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root with:
+
+```
+REACT_APP_API_BASE_URL=http://localhost:8080
+```
+
+Adjust the URL according to your backend API location.
+
+### Installation
+
+```bash
+npm install
+```
 
 ## Available Scripts
 
-In the project directory, you can run:
-
 ### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Runs the app in development mode at [http://localhost:3000](http://localhost:3000).
 
 ### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Launches the test runner in interactive watch mode.
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Builds the app for production to the `build` folder.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Features
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **Branch Management**: Create, read, update, and delete insurance company branches
+- **Form Validation**: Prevents empty submissions
+- **Error Handling**: User-friendly error messages
+- **Success Notifications**: Feedback on successful operations
 
-### `npm run eject`
+## API Integration
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The application connects to a backend API using axios. API endpoints:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- `GET /api/branches`: Fetch all branches
+- `GET /api/branches/:id`: Fetch a specific branch
+- `POST /api/branches`: Create a new branch
+- `PUT /api/branches/:id`: Update an existing branch
+- `DELETE /api/branches/:id`: Delete a branch
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Technology Stack
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- React
+- TypeScript
+- Axios for API requests
+- Semantic UI for UI components
