@@ -4,6 +4,7 @@ package handlers
 import (
 	"ProtocolManager/backend/models"
 	"ProtocolManager/backend/repository"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -60,7 +61,20 @@ func (h *ProtocolHistoryHandler) GetHistoryByProtocolID(c *gin.Context) {
 func (h *ProtocolHistoryHandler) CreateHistory(c *gin.Context) {
 	var history models.ProtocolHistory
 	if err := c.ShouldBindJSON(&history); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(
+			http.StatusBadRequest, gin.H{"error": "Bind error: " + err.Error()},
+		)
+		return
+	}
+
+	log.Printf("Recebido: %+v\n", history)
+
+	// Validar dados obrigatórios
+	if history.ProtocolID == 0 || history.NewStatusID == 0 || history.CreatedBy == 0 {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{"error": "Campos obrigatórios ausentes"},
+		)
 		return
 	}
 

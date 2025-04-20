@@ -114,90 +114,101 @@ func (r *ProtocolRepository) Create(protocol models.Protocol) (
 	return protocol, nil
 }
 
-func (r *ProtocolRepository) Update(id int, protocol models.Protocol) error {
-	// Validate the priority field before updating
-	validPriorities := map[string]bool{
-		"low":    true,
-		"medium": true,
-		"high":   true,
+// backend/repository/protocol_repository.go
+func (r *ProtocolRepository) UpdateFields(
+	id int, fields map[string]interface{},
+) error {
+	// Validação de prioridade, se enviada
+	if p, ok := fields["priority"]; ok {
+		if pStr, ok := p.(string); ok {
+			valid := map[string]bool{"low": true, "medium": true, "high": true}
+			if !valid[pStr] {
+				return fmt.Errorf("prioridade inválida: %s", pStr)
+			}
+		}
 	}
 
-	if !validPriorities[protocol.Priority] {
-		return fmt.Errorf("invalid priority value: %s", protocol.Priority)
+	// Verificar se vai atualizar o status e gerar histórico se necessário
+	if newStatusRaw, ok := fields["status_id"]; ok {
+		newStatusID, ok := toInt(newStatusRaw)
+		if !ok {
+			return fmt.Errorf("status_id inválido")
+		}
+
+		var current models.Protocol
+		if err := r.DB.First(&current, id).Error; err != nil {
+			return err
+		}
+
+		if current.StatusID != newStatusID {
+			oldStatusID := current.StatusID
+
+			history := models.ProtocolHistory{
+				ProtocolID:  current.ProtocolID,
+				OldStatusID: &oldStatusID,
+				NewStatusID: newStatusID,
+				CreatedBy:   current.CreatedBy, // ou 0 por enquanto
+			}
+
+			if err := r.DB.Create(&history).Error; err != nil {
+				return err
+			}
+
+			var newStatus models.ProtocolStatus
+			if err := r.DB.First(&newStatus, newStatusID).Error; err != nil {
+				return err
+			}
+
+			if newStatus.IsTerminal {
+				fields["closed_at"] = time.Now()
+			}
+		}
 	}
 
-	// Get current protocol to check for status changes
-	var currentProtocol models.Protocol
-	if err := r.DB.First(&currentProtocol, id).Error; err != nil {
+	// Executar update
+	return r.DB.Model(&models.Protocol{}).Where(
+		"protocol_id = ?", id,
+	).Updates(fields).Error
+}
+
+// Função auxiliar para garantir que qualquer tipo seja convertido corretamente em int
+func toInt(val interface{}) (int, bool) {
+	switch v := val.(type) {
+	case float64:
+		return int(v), true
+	case int:
+		return v, true
+	case int64:
+		return int(v), true
+	default:
+		return 0, false
+	}
+}
+
+func (r *ProtocolRepository) Delete(id int) error {
+	// Delete attachments
+	if err := r.DB.Where(
+		"protocol_id = ?", id,
+	).Delete(&models.ProtocolAttachment{}).Error; err != nil {
 		return err
 	}
 
-	// Update the protocol
-	result := r.DB.Model(&models.Protocol{ProtocolID: id}).Updates(
-		map[string]interface{}{
-			"title":        protocol.Title,
-			"description":  protocol.Description,
-			"type_id":      protocol.TypeID,
-			"status_id":    protocol.StatusID,
-			"requestor_id": protocol.RequestorID,
-			"customer_id":  protocol.CustomerID,
-			"branch_id":    protocol.BranchID,
-			"assigned_to":  protocol.AssignedTo,
-			"priority":     protocol.Priority,
-			"deadline":     protocol.Deadline,
-		},
-	)
-
-	if result.Error != nil {
-		return result.Error
+	// Delete reminders (se aplicável)
+	if err := r.DB.Where(
+		"protocol_id = ?", id,
+	).Delete(&models.ProtocolReminder{}).Error; err != nil {
+		return err
 	}
 
-	// If status has changed, add to history
-	if currentProtocol.StatusID != protocol.StatusID {
-		// Check if status is terminal
-		var newStatus models.ProtocolStatus
-		if err := r.DB.First(&newStatus, protocol.StatusID).Error; err != nil {
-			return err
-		}
-
-		// Store the old status ID
-		oldStatusID := currentProtocol.StatusID
-
-		// Create history entry for status change
-		history := models.ProtocolHistory{
-			ProtocolID:  protocol.ProtocolID,
-			OldStatusID: &oldStatusID,
-			NewStatusID: protocol.StatusID,
-			Notes:       "Status changed",   // Default note for status change
-			CreatedBy:   protocol.CreatedBy, // Use the protocol's CreatedBy or a specific value
-		}
-
-		if err := r.DB.Create(&history).Error; err != nil {
-			return err
-		}
-
-		// If new status is terminal, set closed_at time
-		if newStatus.IsTerminal {
-			now := time.Now()
-			r.DB.Model(&models.Protocol{ProtocolID: id}).Update(
-				"closed_at", now,
-			)
-		}
-	}
-
-	return nil
-}
-func (r *ProtocolRepository) Delete(id int) error {
-	// Delete related history records first
+	// Delete history
 	if err := r.DB.Where(
 		"protocol_id = ?", id,
 	).Delete(&models.ProtocolHistory{}).Error; err != nil {
 		return err
 	}
 
-	// Delete the protocol
-	result := r.DB.Delete(&models.Protocol{}, id)
-	return result.Error
+	// Delete the protocol itself
+	return r.DB.Delete(&models.Protocol{}, id).Error
 }
 
 // Additional useful methods

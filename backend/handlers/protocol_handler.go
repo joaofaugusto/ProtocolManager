@@ -76,37 +76,37 @@ func (h *ProtocolHandler) CreateProtocol(c *gin.Context) {
 }
 
 // Fix the Update function in the protocol_handler.go file
+// backend/handlers/protocol_handler.go
 func (h *ProtocolHandler) UpdateProtocol(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
 		return
 	}
 
-	var protocol models.Protocol
-	if err := c.ShouldBindJSON(&protocol); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	protocol.ProtocolID = id
-
-	// Pass both ID and protocol to the Update method
-	err = h.Repo.Update(id, protocol)
-	if err != nil {
+	var payload map[string]interface{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{"error": "Failed to update protocol: " + err.Error()},
+			http.StatusBadRequest,
+			gin.H{"error": "JSON inválido: " + err.Error()},
 		)
 		return
 	}
 
-	// Fetch the updated protocol to return
+	err = h.Repo.UpdateFields(id, payload)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{"error": "Erro ao atualizar protocolo: " + err.Error()},
+		)
+		return
+	}
+
 	updated, err := h.Repo.GetByID(id)
 	if err != nil {
 		c.JSON(
 			http.StatusInternalServerError,
-			gin.H{"error": "Protocol updated but failed to retrieve"},
+			gin.H{"error": "Atualizou, mas falhou ao recuperar"},
 		)
 		return
 	}

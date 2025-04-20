@@ -2,9 +2,10 @@
 package models
 
 type ProtocolStatus struct {
-	StatusID   int `gorm:"primaryKey"`
-	StatusName string
-	IsTerminal bool
+	StatusID   int    `json:"status_id" gorm:"primaryKey;column:status_id"`
+	StatusName string `json:"status_name"`
+	Color      string `json:"color"`
+	IsTerminal bool   `json:"is_terminal"`
 }
 
 func (ProtocolStatus) TableName() string {

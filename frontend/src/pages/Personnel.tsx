@@ -5,11 +5,12 @@ import axios from 'axios';
 import { Button, Checkbox, Form, Input, Modal, Select, Table, message } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import '../styles/Personnel.css';
+const { Option } = Select;
 
 const PersonnelPage: React.FC = () => {
-    const [personnel, setPersonnel] = useState<Personnel[]>([]);
+    const [personnel, setPersonnel] = useState([]);
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [currentPersonnel, setCurrentPersonnel] = useState<Personnel | null>(null);
@@ -20,28 +21,24 @@ const PersonnelPage: React.FC = () => {
         const fetchData = async () => {
             try {
                 setLoading(true);
+                const [personnelResponse, branchesResponse] = await Promise.all([
+                    fetch('http://localhost:8080/api/personnel'),  // Use full URL with port
+                    fetch('http://localhost:8080/api/branches')    // Use full URL with port
+                ]);
 
-                try {
-                    const branchesRes = await axios.get('http://localhost:8080/api/branches');
-                    setBranches(branchesRes.data);
-                } catch (error) {
-                    console.error('Error fetching branches:', error);
-                    message.warning('Could not load branch data');
-                    setBranches([]);
+                // Check for success before parsing JSON
+                if (!personnelResponse.ok || !branchesResponse.ok) {
+                    throw new Error('One or more API requests failed');
                 }
 
-                try {
-                    const personnelRes = await axios.get('http://localhost:8080/api/personnel');
-                    setPersonnel(personnelRes.data);
-                } catch (error) {
-                    console.error('Error fetching personnel:', error);
-                    message.error('Could not load personnel data');
-                    setPersonnel([]);
-                }
+                const personnelData = await personnelResponse.json();
+                const branchesData = await branchesResponse.json();
 
-                setLoading(false);
+                setPersonnel(personnelData);
+                setBranches(branchesData);
             } catch (error) {
-                console.error('Error in fetchData:', error);
+                console.error('Error fetching data:', error);
+            } finally {
                 setLoading(false);
             }
         };
@@ -263,9 +260,9 @@ const PersonnelPage: React.FC = () => {
                             allowClear
                         >
                             {branches.map(branch => (
-                                <Select.Option key={branch.branch_id} value={branch.branch_id}>
+                                <Option key={branch.branch_id} value={branch.branch_id}>
                                     {branch.branch_name}
-                                </Select.Option>
+                                </Option>
                             ))}
                         </Select>
                     </Form.Item>

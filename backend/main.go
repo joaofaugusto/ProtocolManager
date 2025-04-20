@@ -2,6 +2,7 @@
 package main
 
 import (
+	"ProtocolManager/backend/config"
 	"ProtocolManager/backend/models"
 	"database/sql"
 	"log"
@@ -18,6 +19,7 @@ import (
 )
 
 func main() {
+	cfg := config.NewConfig()
 	// Connection string
 	dsn := "host=localhost user=postgres password=123 dbname=protocol port=5432 sslmode=disable"
 
@@ -142,6 +144,9 @@ func main() {
 	r.PUT("/api/protocol-statuses/:id", protocolStatusHandler.UpdateStatus)
 	r.DELETE("/api/protocol-statuses/:id", protocolStatusHandler.DeleteStatus)
 
+	fileRepo := repository.NewFileRepository(sqlDB)
+	attachmentHandler := handlers.NewAttachmentHandler(fileRepo, cfg)
+	r.GET("/api/attachments/:id/download", attachmentHandler.DownloadAttachment)
 	// Make sure the table is auto-migrated
 	if err := gormDB.AutoMigrate(
 		&models.Protocol{},

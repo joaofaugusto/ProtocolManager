@@ -1,23 +1,47 @@
 // src/pages/Protocols.tsx
 import React, { useState, useEffect } from 'react';
 import {
-    Table, Button, Modal, Form, Input, Select, DatePicker,
-    Tabs, Upload, message, List, Tag, Card, Popconfirm
+    Table, Button, Modal, Form, Input, DatePicker,
+    Tabs, Upload, message, List, Tag, Card, ConfigProvider, Popconfirm
 } from 'antd';
 import {
     EditOutlined, DeleteOutlined, PlusOutlined,
     UploadOutlined, FileOutlined, ClockCircleOutlined,
-    BellOutlined, CheckOutlined
+    BellOutlined, InboxOutlined, CheckOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import moment from 'moment';
 import { Protocol, Customer, Personnel, ProtocolStatus, ProtocolHistory, ProtocolAttachment, ProtocolReminder } from '../types/types';
 import '../styles/Protocol.css';
+import { Select } from 'antd';
+import ptBR from 'antd/locale/pt_BR';
+import 'dayjs/locale/pt-br';
+
 
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Option } = Select;
 
+// Add this function to handle file viewing
+const handleViewFile = (attachmentId: number, fileName: string) => {
+    const fileUrl = `http://localhost:8080/api/attachments/${attachmentId}/download`;
+    window.open(fileUrl, '_blank');
+};
+
+const getDefaultColorForStatus = (statusName: string): string => {
+    const map: Record<string, string> = {
+        'New': 'blue',
+        'In Progress': 'cyan',
+        'Awaiting Information': 'orange',
+        'Under Review': 'purple',
+        'Approved': 'green',
+        'Rejected': 'red',
+        'Completed': 'green',
+        'Cancelled': 'gray',
+    };
+    const lower = statusName.toLowerCase();
+    return map[lower] || 'default';
+};
 
 const ProtocolPage: React.FC = () => {
     // States for protocols and related entities
@@ -37,6 +61,7 @@ const ProtocolPage: React.FC = () => {
     const [detailsModalVisible, setDetailsModalVisible] = useState<boolean>(false);
     const [reminderModalVisible, setReminderModalVisible] = useState<boolean>(false);
     const [historyModalVisible, setHistoryModalVisible] = useState<boolean>(false);
+    const filteredStatuses = statuses.filter(status => status != null);
 
     // Form and loading states
     const [protocolForm] = Form.useForm();
@@ -52,19 +77,24 @@ const ProtocolPage: React.FC = () => {
             try {
                 // Get all protocols
                 const protocolsRes = await axios.get('http://localhost:8080/api/protocols');
-                setProtocols(protocolsRes.data);
+                setProtocols(protocolsRes.data as Protocol[]);
 
                 // Get customers
                 const customersRes = await axios.get('http://localhost:8080/api/customers');
-                setCustomers(customersRes.data);
+                setCustomers(customersRes.data as Customer[]);
 
                 // Get personnel
                 const personnelRes = await axios.get('http://localhost:8080/api/personnel');
-                setPersonnel(personnelRes.data);
+                setPersonnel(personnelRes.data as Personnel[]);
 
                 // Get statuses
                 const statusesRes = await axios.get('http://localhost:8080/api/protocol-statuses');
-                setStatuses(statusesRes.data);
+                const transformedStatuses = statusesRes.data.map((status: any) => ({
+                    ...status,
+                    color: status.color || getDefaultColorForStatus(status.status_name)
+                }));
+
+                setStatuses(transformedStatuses);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 message.error('Failed to load data');
@@ -102,19 +132,27 @@ const ProtocolPage: React.FC = () => {
     // Handle protocol form submission
     const handleProtocolSubmit = async (values: any) => {
         try {
+            // Convert string IDs to integers for Go backend
+            const processedValues = {
+                ...values,
+                status_id: parseInt(values.status_id, 10) || 0,
+                customer_id: parseInt(values.customer_id, 10),
+                assigned_to: parseInt(values.assigned_to, 10)
+            };
+
             if (isEditing && selectedProtocol) {
                 // Update existing protocol
-                await axios.put(`http://localhost:8080/api/protocols/${selectedProtocol.protocol_id}`, values);
-                message.success('Protocol updated successfully');
+                await axios.put(`http://localhost:8080/api/protocols/${selectedProtocol.protocol_id}`, processedValues);
+                message.success('Protocolo atualizado com sucesso!');
 
                 // Update local state
                 setProtocols(protocols.map(p =>
-                    p.protocol_id === selectedProtocol.protocol_id ? { ...p, ...values } : p
+                    p.protocol_id === selectedProtocol.protocol_id ? { ...p, ...processedValues } : p
                 ));
             } else {
                 // Create new protocol
-                const response = await axios.post('http://localhost:8080/api/protocols', values);
-                message.success('Protocol created successfully');
+                const response = await axios.post('http://localhost:8080/api/protocols', processedValues);
+                message.success('Protocolo criado com sucesso!');
 
                 // Add to local state
                 setProtocols([...protocols, response.data]);
@@ -122,8 +160,8 @@ const ProtocolPage: React.FC = () => {
             setProtocolModalVisible(false);
             protocolForm.resetFields();
         } catch (error) {
-            console.error('Error saving protocol:', error);
-            message.error('Failed to save protocol');
+            console.error('Erro ao salvar protocolo:', error);
+            message.error('Falha ao salvar protocolo');
         }
     };
 
@@ -143,13 +181,13 @@ const ProtocolPage: React.FC = () => {
                 reminderData
             );
 
-            message.success('Reminder added successfully');
+            message.success('Lembrete adicionado com sucesso!');
             setProtocolReminders([...protocolReminders, response.data]);
             setReminderModalVisible(false);
             reminderForm.resetFields();
         } catch (error) {
-            console.error('Error adding reminder:', error);
-            message.error('Failed to add reminder');
+            console.error('Erro ao adicionar lembrete:', error);
+            message.error('Falha ao adicionar lembrete');
         }
     };
 
@@ -185,12 +223,12 @@ const ProtocolPage: React.FC = () => {
                 status_id: values.new_status_id
             });
 
-            message.success('Protocol status updated');
+            message.success('Status do protocolo atualizado');
             setHistoryModalVisible(false);
             historyForm.resetFields();
         } catch (error) {
-            console.error('Error updating status:', error);
-            message.error('Failed to update status');
+            console.error('Erro ao atualizar status do protocolo:', error);
+            message.error('Falha ao atualizar status');
         }
     };
 
@@ -202,7 +240,7 @@ const ProtocolPage: React.FC = () => {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('uploaded_by', '1'); // Replace with actual user ID from auth
+        formData.append('uploaded_by', '2'); // Replace with actual user ID from auth
 
         try {
             const response = await axios.post(
@@ -211,11 +249,11 @@ const ProtocolPage: React.FC = () => {
             );
 
             setProtocolAttachments([...protocolAttachments, response.data]);
-            message.success('File uploaded successfully');
+            message.success('Arquivo adicionado com sucesso!');
             onSuccess();
         } catch (error) {
-            console.error('Error uploading file:', error);
-            message.error('Failed to upload file');
+            console.error('Erro ao adicionar arquivo:', error);
+            message.error('Falha ao adicionar arquivo');
             onError();
         }
     };
@@ -230,10 +268,10 @@ const ProtocolPage: React.FC = () => {
                 r.reminder_id === reminder.reminder_id ? { ...r, is_sent: true } : r
             ));
 
-            message.success('Reminder marked as sent');
+            message.success('Lembrete marcado como concluído');
         } catch (error) {
-            console.error('Error marking reminder as sent:', error);
-            message.error('Failed to update reminder');
+            console.error('Erro ao marcar o lembrete como concluído:', error);
+            message.error('Falha ao atualizar lembrete');
         }
     };
 
@@ -242,10 +280,10 @@ const ProtocolPage: React.FC = () => {
         try {
             await axios.delete(`http://localhost:8080/api/reminders/${id}`);
             setProtocolReminders(protocolReminders.filter(r => r.reminder_id !== id));
-            message.success('Reminder deleted successfully');
+            message.success('Lembrete removido com sucesso!');
         } catch (error) {
-            console.error('Error deleting reminder:', error);
-            message.error('Failed to delete reminder');
+            console.error('Erro ao remover lembrete:', error);
+            message.error('Falha ao remover lembrete');
         }
     };
 
@@ -254,10 +292,10 @@ const ProtocolPage: React.FC = () => {
         try {
             await axios.delete(`http://localhost:8080/api/attachments/${id}`);
             setProtocolAttachments(protocolAttachments.filter(a => a.attachment_id !== id));
-            message.success('Attachment deleted successfully');
+            message.success('Arquivo removido com sucesso!');
         } catch (error) {
-            console.error('Error deleting attachment:', error);
-            message.error('Failed to delete attachment');
+            console.error('Erro ao remover arquivo:', error);
+            message.error('Falha ao remover arquivo');
         }
     };
 
@@ -266,10 +304,10 @@ const ProtocolPage: React.FC = () => {
         try {
             await axios.delete(`http://localhost:8080/api/protocols/${id}`);
             setProtocols(protocols.filter(p => p.protocol_id !== id));
-            message.success('Protocol deleted successfully');
+            message.success('Protocolo removido com sucesso!');
         } catch (error) {
-            console.error('Error deleting protocol:', error);
-            message.error('Failed to delete protocol');
+            console.error('Erro ao remover protocolo:', error);
+            message.error('Falha ao remover protocolo');
         }
     };
 
@@ -300,13 +338,13 @@ const ProtocolPage: React.FC = () => {
             width: '5%',
         },
         {
-            title: 'Title',
+            title: 'Título',
             dataIndex: 'title',
             key: 'title',
             width: '20%',
         },
         {
-            title: 'Customer',
+            title: 'Cliente',
             key: 'customer',
             width: '15%',
             render: (text: any, record: Protocol) => {
@@ -315,7 +353,7 @@ const ProtocolPage: React.FC = () => {
             }
         },
         {
-            title: 'Assigned To',
+            title: 'Responsável',
             key: 'assigned_to',
             width: '15%',
             render: (text: any, record: Protocol) => {
@@ -337,7 +375,7 @@ const ProtocolPage: React.FC = () => {
             }
         },
         {
-            title: 'Priority',
+            title: 'Prioridade',
             dataIndex: 'priority',
             key: 'priority',
             width: '10%',
@@ -348,14 +386,14 @@ const ProtocolPage: React.FC = () => {
             )
         },
         {
-            title: 'Expected Completion',
+            title: 'Data de Conclusão Esperada',
             dataIndex: 'expected_completion',
             key: 'expected_completion',
             width: '15%',
-            render: (date: string) => date ? moment(date).format('YYYY-MM-DD') : 'Not set'
+            render: (date: string) => date ? moment(date).format('DD/MM/YYYY') : 'Not set'
         },
         {
-            title: 'Actions',
+            title: 'Ações',
             key: 'actions',
             width: '10%',
             render: (text: any, record: Protocol) => (
@@ -371,13 +409,13 @@ const ProtocolPage: React.FC = () => {
                         onClick={() => loadProtocolDetails(record)}
                         size="small"
                     >
-                        Details
+                        Detalhes
                     </Button>
                     <Popconfirm
-                        title="Are you sure you want to delete this protocol?"
+                        title="Você tem certeza que deseja remover este protocolo?"
                         onConfirm={() => handleDeleteProtocol(record.protocol_id)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText="Sim"
+                        cancelText="Não"
                     >
                         <Button
                             danger
@@ -393,13 +431,13 @@ const ProtocolPage: React.FC = () => {
     return (
         <div className="protocol-page">
             <div className="page-header">
-                <h1>Protocol Management</h1>
+                <h1>Protocolos</h1>
                 <Button
                     type="primary"
                     onClick={() => openProtocolModal()}
                     icon={<PlusOutlined />}
                 >
-                    Add New Protocol
+                    Adicionar
                 </Button>
             </div>
 
@@ -407,13 +445,21 @@ const ProtocolPage: React.FC = () => {
                 dataSource={protocols}
                 columns={columns}
                 rowKey="protocol_id"
+                locale={{
+                    emptyText: (
+                        <div style={{ textAlign: 'center' }}>
+                            <InboxOutlined style={{ fontSize: 28, color: '#ccc', marginBottom: 8 }} />
+                            <div>Nenhum dado encontrado</div>
+                        </div>
+                    )
+                }}
                 loading={loading}
                 pagination={{ pageSize: 10 }}
             />
 
             {/* Protocol Form Modal */}
             <Modal
-                title={isEditing ? 'Edit Protocol' : 'Add New Protocol'}
+                title={isEditing ? 'Editar Protocolo' : 'Adicionar'}
                 open={protocolModalVisible}
                 onCancel={() => setProtocolModalVisible(false)}
                 footer={null}
@@ -426,40 +472,40 @@ const ProtocolPage: React.FC = () => {
                 >
                     <Form.Item
                         name="title"
-                        label="Title"
-                        rules={[{ required: true, message: 'Please enter a title' }]}
+                        label="Título"
+                        rules={[{ required: true, message: 'Por favor insira um título' }]}
                     >
                         <Input />
                     </Form.Item>
 
                     <Form.Item
                         name="description"
-                        label="Description"
-                        rules={[{ required: true, message: 'Please enter a description' }]}
+                        label="Descrição"
+                        rules={[{ required: true, message: 'Por favor insira uma descrição' }]}
                     >
                         <TextArea rows={4} />
                     </Form.Item>
 
                     <Form.Item
                         name="customer_id"
-                        label="Customer"
-                        rules={[{ required: true, message: 'Please select a customer' }]}
+                        label="Cliente"
+                        rules={[{ required: true, message: 'Por favor selecione um cliente' }]}
                     >
-                        <Select placeholder="Select a customer">
+                        <Select placeholder="Selecione um cliente">
                             {customers.map(customer => (
-                                <Select.Option key={customer.customer_id} value={customer.customer_id}>
+                                <Option key={customer.customer_id} value={customer.customer_id}>
                                     {customer.first_name} {customer.last_name}
-                                </Select.Option>
+                                </Option>
                             ))}
                         </Select>
                     </Form.Item>
 
                     <Form.Item
                         name="assigned_to"
-                        label="Assigned To"
-                        rules={[{ required: true, message: 'Please select a staff member' }]}
+                        label="Responsável"
+                        rules={[{ required: true, message: 'Por favor selecione um responsável' }]}
                     >
-                        <Select placeholder="Select staff member">
+                        <Select placeholder="Selecione um responsável">
                             {personnel.map(person => (
                                 <Option key={person.personnel_id} value={person.personnel_id}>
                                     {person.first_name} {person.last_name}
@@ -471,12 +517,15 @@ const ProtocolPage: React.FC = () => {
                     <Form.Item
                         name="status_id"
                         label="Status"
-                        rules={[{ required: true, message: 'Please select a status' }]}
+                        rules={[{ required: true, message: 'Por favor selecione um status' }]}
                     >
-                        <Select placeholder="Select status">
-                            {statuses.map(status => (
-                                <Option key={status.status_id} value={status.status_id}>
-                                    {status.status_name}
+                        <Select placeholder="Selecione um Status">
+                            {filteredStatuses.map(status => (
+                                <Option
+                                    key={status.status_id || `status-${Math.random()}`}
+                                    value={status.status_id || undefined}
+                                >
+                                    {status.status_name || 'Unknown'}
                                 </Option>
                             ))}
                         </Select>
@@ -484,36 +533,46 @@ const ProtocolPage: React.FC = () => {
 
                     <Form.Item
                         name="priority"
-                        label="Priority"
-                        rules={[{ required: true, message: 'Please select a priority' }]}
+                        label="Prioridade"
+                        rules={[{ required: true, message: 'Por favor selecione uma prioridade' }]}
                     >
-                        <Select placeholder="Select priority">
-                            <Option value="Low">Low</Option>
-                            <Option value="Medium">Medium</Option>
-                            <Option value="High">High</Option>
+                        <Select placeholder="Selecione a prioridade">
+                            <Option value="Low">Baixa</Option>
+                            <Option value="Medium">Média</Option>
+                            <Option value="High">Alta</Option>
                         </Select>
                     </Form.Item>
 
                     <Form.Item
                         name="date_required"
-                        label="Date Required"
+                        label="Data da Solicitação"
                     >
-                        <DatePicker style={{ width: '100%' }} />
+                        <ConfigProvider locale={ptBR}>
+                            <DatePicker
+                                placeholder="Selecione uma data"
+                                style={{ width: '100%' }}
+                            />
+                        </ConfigProvider>
                     </Form.Item>
 
                     <Form.Item
                         name="expected_completion"
-                        label="Expected Completion Date"
+                        label="Data de Conclusão Esperada"
                     >
-                        <DatePicker style={{ width: '100%' }} />
+                        <ConfigProvider locale={ptBR}>
+                            <DatePicker
+                                placeholder="Selecione uma data"
+                                style={{ width: '100%' }}
+                            />
+                        </ConfigProvider>
                     </Form.Item>
 
                     <div className="form-actions">
                         <Button onClick={() => setProtocolModalVisible(false)}>
-                            Cancel
+                            Cancelar
                         </Button>
                         <Button type="primary" htmlType="submit">
-                            {isEditing ? 'Update' : 'Create'}
+                            {isEditing ? 'Atualizar' : 'Criar'}
                         </Button>
                     </div>
                 </Form>
@@ -521,7 +580,7 @@ const ProtocolPage: React.FC = () => {
 
             {/* Protocol Details Modal */}
             <Modal
-                title="Protocol Details"
+                title="Detalhes do Protocolo"
                 open={detailsModalVisible}
                 onCancel={() => setDetailsModalVisible(false)}
                 footer={null}
@@ -529,20 +588,20 @@ const ProtocolPage: React.FC = () => {
             >
                 {selectedProtocol && (
                     <Tabs defaultActiveKey="details">
-                        <TabPane tab="Basic Information" key="details">
+                        <TabPane tab="Informações Básicas" key="details">
                             <div className="protocol-details">
                                 <Card>
                                     <h2>{selectedProtocol.title}</h2>
-                                    <p><strong>Description:</strong> {selectedProtocol.description}</p>
+                                    <p><strong>Descrição:</strong> {selectedProtocol.description}</p>
                                     <div className="detail-row">
                                         <div>
-                                            <p><strong>Customer:</strong> {
+                                            <p><strong>Cliente:</strong> {
                                                 customers.find(c => c.customer_id === selectedProtocol.customer_id)
                                                     ? `${customers.find(c => c.customer_id === selectedProtocol.customer_id)!.first_name} 
                                            ${customers.find(c => c.customer_id === selectedProtocol.customer_id)!.last_name}`
                                                     : 'N/A'
                                             }</p>
-                                            <p><strong>Assigned To:</strong> {
+                                            <p><strong>Responsável:</strong> {
                                                 personnel.find(p => p.personnel_id === selectedProtocol.assigned_to)
                                                     ? `${personnel.find(p => p.personnel_id === selectedProtocol.assigned_to)!.first_name} 
                                            ${personnel.find(p => p.personnel_id === selectedProtocol.assigned_to)!.last_name}`
@@ -555,7 +614,7 @@ const ProtocolPage: React.FC = () => {
                                             }>
                                                 {statuses.find(s => s.status_id === selectedProtocol.status_id)?.status_name || 'Unknown'}
                                             </Tag></p>
-                                            <p><strong>Priority:</strong> <Tag color={
+                                            <p><strong>Prioridade:</strong> <Tag color={
                                                 selectedProtocol.priority === 'High' ? 'red' :
                                                     selectedProtocol.priority === 'Medium' ? 'orange' : 'green'
                                             }>
@@ -565,16 +624,16 @@ const ProtocolPage: React.FC = () => {
                                     </div>
                                     <div className="detail-row">
                                         <div>
-                                            <p><strong>Date Required:</strong> {
+                                            <p><strong>Data da Solicitação:</strong> {
                                                 selectedProtocol.date_required
-                                                    ? moment(selectedProtocol.date_required).format('YYYY-MM-DD')
+                                                    ? moment(selectedProtocol.date_required).format('DD/MM/YYYY')
                                                     : 'Not specified'
                                             }</p>
                                         </div>
                                         <div>
-                                            <p><strong>Expected Completion:</strong> {
+                                            <p><strong>Data da Conclusão Esperada:</strong> {
                                                 selectedProtocol.expected_completion
-                                                    ? moment(selectedProtocol.expected_completion).format('YYYY-MM-DD')
+                                                    ? moment(selectedProtocol.expected_completion).format('DD/MM/YYYY')
                                                     : 'Not specified'
                                             }</p>
                                         </div>
@@ -584,27 +643,35 @@ const ProtocolPage: React.FC = () => {
                                             type="primary"
                                             onClick={() => setHistoryModalVisible(true)}
                                         >
-                                            Update Status
+                                            Atualizar Status
                                         </Button>
                                     </div>
                                 </Card>
                             </div>
                         </TabPane>
 
-                        <TabPane tab="History" key="history">
+                        <TabPane tab="Histórico" key="history">
                             <List
                                 dataSource={protocolHistory}
+                                locale={{
+                                    emptyText: (
+                                        <div style={{ textAlign: 'center' }}>
+                                            <InboxOutlined style={{ fontSize: 28, color: '#ccc', marginBottom: 8 }} />
+                                            <div>Nenhum dado encontrado</div>
+                                        </div>
+                                    )
+                                }}
                                 renderItem={item => (
                                     <List.Item>
                                         <Card style={{ width: '100%' }}>
                                             <div className="history-item">
                                                 <div>
                                                     <p>
-                                                        Status changed from {' '}
+                                                        Status atualizado de {' '}
                                                         <Tag color={item.previous_status?.color || 'default'}>
                                                             {item.previous_status?.status_name || 'N/A'}
                                                         </Tag>
-                                                        {' '} to {' '}
+                                                        {' '} para {' '}
                                                         <Tag color={item.new_status?.color || 'default'}>
                                                             {item.new_status?.status_name || 'N/A'}
                                                         </Tag>
@@ -613,10 +680,10 @@ const ProtocolPage: React.FC = () => {
                                                 </div>
                                                 <div>
                                                     <p>
-                                                        By: {item.created_by_agent?.first_name} {item.created_by_agent?.last_name}
+                                                        Por: {item.created_by_agent?.first_name} {item.created_by_agent?.last_name}
                                                     </p>
                                                     <p>
-                                                        {moment(item.created_at).format('YYYY-MM-DD HH:mm')}
+                                                        {moment(item.created_at).format('DD/MM/YYYY HH:mm')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -627,25 +694,41 @@ const ProtocolPage: React.FC = () => {
                             />
                         </TabPane>
 
-                        <TabPane tab="Attachments" key="attachments">
+                        <TabPane tab="Arquivos" key="attachments">
                             <div className="attachments-section">
                                 <Upload
                                     customRequest={handleFileUpload}
                                     showUploadList={false}
                                 >
-                                    <Button icon={<UploadOutlined />}>Upload File</Button>
+                                    <Button icon={<UploadOutlined />}>Adicionar Arquivo</Button>
                                 </Upload>
 
                                 <List
                                     dataSource={protocolAttachments}
+                                    locale={{
+                                        emptyText: (
+                                            <div style={{ textAlign: 'center' }}>
+                                                <InboxOutlined style={{ fontSize: 28, color: '#ccc', marginBottom: 8 }} />
+                                                <div>Nenhum dado encontrado</div>
+                                            </div>
+                                        )
+                                    }}
                                     renderItem={item => (
                                         <List.Item
                                             actions={[
+                                                <Button
+                                                    type="primary"
+                                                    icon={<FileOutlined />}
+                                                    size="small"
+                                                    onClick={() => handleViewFile(item.attachment_id, item.file_name)}
+                                                >
+                                                    Baixar
+                                                </Button>,
                                                 <Popconfirm
-                                                    title="Are you sure you want to delete this file?"
+                                                    title="Você tem certeza que deseja remover este arquivo?"
                                                     onConfirm={() => handleDeleteAttachment(item.attachment_id)}
-                                                    okText="Yes"
-                                                    cancelText="No"
+                                                    okText="Sim"
+                                                    cancelText="Não"
                                                 >
                                                     <Button danger icon={<DeleteOutlined />} size="small" />
                                                 </Popconfirm>
@@ -654,7 +737,7 @@ const ProtocolPage: React.FC = () => {
                                             <List.Item.Meta
                                                 icon={<FileOutlined />}
                                                 title={item.file_name}
-                                                description={`Uploaded by ${item.uploaded_by_agent?.first_name} ${item.uploaded_by_agent?.last_name} on ${moment(item.uploaded_at).format('YYYY-MM-DD HH:mm')}`}
+                                                description={`Adicionado por ${item.uploaded_by_agent?.first_name} ${item.uploaded_by_agent?.last_name} em ${moment(item.uploaded_at).format('DD/MM/YYYY HH:mm')}`}
                                             />
                                         </List.Item>
                                     )}
@@ -662,7 +745,7 @@ const ProtocolPage: React.FC = () => {
                             </div>
                         </TabPane>
 
-                        <TabPane tab="Reminders" key="reminders">
+                        <TabPane tab="Lembretes" key="reminders">
                             <div className="reminders-section">
                                 <Button
                                     type="primary"
@@ -670,11 +753,19 @@ const ProtocolPage: React.FC = () => {
                                     icon={<BellOutlined />}
                                     style={{ marginBottom: '16px' }}
                                 >
-                                    Add Reminder
+                                    Adicionar Lembrete
                                 </Button>
 
                                 <List
                                     dataSource={protocolReminders}
+                                    locale={{
+                                        emptyText: (
+                                            <div style={{ textAlign: 'center' }}>
+                                                <InboxOutlined style={{ fontSize: 28, color: '#ccc', marginBottom: 8 }} />
+                                                <div>Nenhum dado encontrado</div>
+                                            </div>
+                                        )
+                                    }}
                                     renderItem={item => (
                                         <List.Item
                                             actions={[
@@ -685,14 +776,14 @@ const ProtocolPage: React.FC = () => {
                                                         size="small"
                                                         onClick={() => handleMarkReminderSent(item)}
                                                     >
-                                                        Mark Sent
+                                                        Marcar como Concluído
                                                     </Button>
                                                 ),
                                                 <Popconfirm
-                                                    title="Are you sure you want to delete this reminder?"
+                                                    title="Você tem certeza que deseja remover este lembrete?"
                                                     onConfirm={() => handleDeleteReminder(item.reminder_id)}
-                                                    okText="Yes"
-                                                    cancelText="No"
+                                                    okText="Sim"
+                                                    cancelText="Não"
                                                 >
                                                     <Button danger icon={<DeleteOutlined />} size="small" />
                                                 </Popconfirm>
@@ -702,10 +793,10 @@ const ProtocolPage: React.FC = () => {
                                                 avatar={<ClockCircleOutlined style={{ fontSize: 24 }} />}
                                                 title={
                                                     <span>
-                                            {moment(item.reminder_date).format('YYYY-MM-DD HH:mm')}
+                                            {moment(item.reminder_date).format('DD/MM/YYYY HH:mm')}
                                                         {item.is_sent ?
-                                                            <Tag color="green" style={{ marginLeft: 8 }}>Sent</Tag> :
-                                                            <Tag color="orange" style={{ marginLeft: 8 }}>Pending</Tag>
+                                                            <Tag color="green" style={{ marginLeft: 8 }}>Concluído</Tag> :
+                                                            <Tag color="orange" style={{ marginLeft: 8 }}>Pendente</Tag>
                                                         }
                                         </span>
                                                 }
@@ -722,7 +813,7 @@ const ProtocolPage: React.FC = () => {
 
             {/* Add Reminder Modal */}
             <Modal
-                title="Add Reminder"
+                title="Adicionar Lembrete"
                 open={reminderModalVisible}
                 onCancel={() => setReminderModalVisible(false)}
                 footer={null}
@@ -734,24 +825,24 @@ const ProtocolPage: React.FC = () => {
                 >
                     <Form.Item
                         name="reminder_date"
-                        label="Reminder Date"
-                        rules={[{ required: true, message: 'Please select a date and time' }]}
+                        label="Data do Lembrete"
+                        rules={[{ required: true, message: 'Por favor escolha uma data e um horário' }]}
                     >
                         <DatePicker showTime style={{ width: '100%' }} />
                     </Form.Item>
 
                     <Form.Item
                         name="reminder_message"
-                        label="Message"
-                        rules={[{ required: true, message: 'Please enter a reminder message' }]}
+                        label="Mensagem"
+                        rules={[{ required: true, message: 'Por favor escreva a mensagem do lembrete' }]}
                     >
                         <TextArea rows={4} />
                     </Form.Item>
 
                     <Form.Item
                         name="created_by"
-                        label="Created By"
-                        initialValue={1} // Replace with actual user ID
+                        label="Criado por"
+                        initialValue={2} // Replace with actual user ID
                         hidden={true}
                     >
                         <Input />
@@ -759,10 +850,10 @@ const ProtocolPage: React.FC = () => {
 
                     <div className="form-actions">
                         <Button onClick={() => setReminderModalVisible(false)}>
-                            Cancel
+                            Cancelar
                         </Button>
                         <Button type="primary" htmlType="submit">
-                            Add Reminder
+                            Adicionar Lembrete
                         </Button>
                     </div>
                 </Form>
@@ -770,7 +861,7 @@ const ProtocolPage: React.FC = () => {
 
             {/* Update Status Modal */}
             <Modal
-                title="Update Protocol Status"
+                title="Atualizar Status do Protocolo"
                 open={historyModalVisible}
                 onCancel={() => setHistoryModalVisible(false)}
                 footer={null}
@@ -782,10 +873,10 @@ const ProtocolPage: React.FC = () => {
                 >
                     <Form.Item
                         name="new_status_id"
-                        label="New Status"
-                        rules={[{ required: true, message: 'Please select a status' }]}
+                        label="Novo Status"
+                        rules={[{ required: true, message: 'Por favor selecione um status' }]}
                     >
-                        <Select placeholder="Select new status">
+                        <Select placeholder="Selecione o novo Status">
                             {statuses.map(status => (
                                 <Option key={status.status_id} value={status.status_id}>
                                     {status.status_name}
@@ -796,15 +887,15 @@ const ProtocolPage: React.FC = () => {
 
                     <Form.Item
                         name="notes"
-                        label="Notes"
+                        label="Anotações"
                     >
                         <TextArea rows={4} />
                     </Form.Item>
 
                     <Form.Item
                         name="created_by"
-                        label="Updated By"
-                        initialValue={1} // Replace with actual user ID
+                        label="Atualizado por"
+                        initialValue={2} // Replace with actual user ID
                         hidden={true}
                     >
                         <Input />
@@ -812,10 +903,10 @@ const ProtocolPage: React.FC = () => {
 
                     <div className="form-actions">
                         <Button onClick={() => setHistoryModalVisible(false)}>
-                            Cancel
+                            Cancelar
                         </Button>
                         <Button type="primary" htmlType="submit">
-                            Update Status
+                            Atualizar Status
                         </Button>
                     </div>
                 </Form>
