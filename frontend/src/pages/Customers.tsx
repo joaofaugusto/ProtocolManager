@@ -197,7 +197,7 @@ const CustomerPage: React.FC = () => {
     return (
         <div className="customer-page">
             <div className="page-header">
-                <h1>Customer Management</h1>
+                <h1>Clientes</h1>
                 <Button
                     type="primary"
                     onClick={() => handleOpenModal()}

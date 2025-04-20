@@ -1,19 +1,23 @@
-// src/components/Navbar.tsx
-import React from 'react';
+import { Layout, Menu } from 'antd';
 import { Link } from 'react-router-dom';
+
+const { Header } = Layout;
 
 const Navbar: React.FC = () => {
     return (
-        <nav className="navbar">
-            <div className="logo">Insurance Protocol System</div>
-            <ul className="nav-links">
-                <li><Link to="/">Dashboard</Link></li>
-                <li><Link to="/protocols">Protocols</Link></li>
-                <li><Link to="/customers">Customers</Link></li>
-                <li><Link to="/personnel">Personnel</Link></li>
-                <li><Link to="/branches">Branches</Link></li>
-            </ul>
-        </nav>
+        <Header style={{ backgroundColor: '#fff', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)' }}>
+            <div className="logo" style={{ float: 'left', fontWeight: 600, color: '#1890ff' }}>
+                ProtocolManager
+            </div>
+            <Menu mode="horizontal" defaultSelectedKeys={['/']} style={{ marginLeft: 200 }}>
+                <Menu.Item key="/pagina-inicial"><Link to="/pagina-inicial">Dashboard</Link></Menu.Item>
+                <Menu.Item key="/protocols"><Link to="/protocols">Protocolos</Link></Menu.Item>
+                <Menu.Item key="/customers"><Link to="/customers">Clientes</Link></Menu.Item>
+                <Menu.Item key="/personnel"><Link to="/personnel">Corretores</Link></Menu.Item>
+                <Menu.Item key="/branches"><Link to="/branches">Seguradoras</Link></Menu.Item>
+                <Menu.Item key="/"><Link to="/">Sair</Link></Menu.Item>
+            </Menu>
+        </Header>
     );
 };
 

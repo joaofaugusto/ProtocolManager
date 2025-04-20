@@ -95,7 +95,7 @@ const Branches: React.FC = () => {
     return (
         <div className="branches-page">
             <div className="page-header">
-                <h1>Insurance Branches</h1>
+                <h1>Seguradoras</h1>
                 <Button primary onClick={() => openModal()}>
                     Add Branch
                 </Button>

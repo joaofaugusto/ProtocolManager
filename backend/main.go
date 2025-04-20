@@ -171,6 +171,11 @@ func main() {
 			log.Printf("Error creating default protocol type: %v", err)
 		}
 	}
+	userRepo := repository.NewUserRepository(gormDB)
+	authHandler := handlers.NewAuthHandler(userRepo, "sua_chave_secreta_aqui")
+
+	r.POST("/api/login", authHandler.Login)
+	r.POST("/api/register", authHandler.Register)
 
 	// Start server
 	port := os.Getenv("PORT")

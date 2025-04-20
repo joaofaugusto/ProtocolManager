@@ -189,7 +189,7 @@ const PersonnelPage: React.FC = () => {
     return (
         <div className="personnel-page">
             <div className="page-header">
-                <h1>Sales Personnel Management</h1>
+                <h1>Corretores</h1>
                 <Button
                     type="primary"
                     onClick={() => handleOpenModal()}
