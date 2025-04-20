@@ -49,7 +49,7 @@ const ProtocolPage: React.FC = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [personnel, setPersonnel] = useState<Personnel[]>([]);
     const [statuses, setStatuses] = useState<ProtocolStatus[]>([]);
-
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     // States for selected protocol and its related data
     const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
     const [protocolHistory, setProtocolHistory] = useState<ProtocolHistory[]>([]);
@@ -76,19 +76,19 @@ const ProtocolPage: React.FC = () => {
             setLoading(true);
             try {
                 // Get all protocols
-                const protocolsRes = await axios.get('http://localhost:8080/api/protocols');
+                const protocolsRes = await axios.get(`${API_BASE}/api/protocols`);
                 setProtocols(protocolsRes.data as Protocol[]);
 
                 // Get customers
-                const customersRes = await axios.get('http://localhost:8080/api/customers');
+                const customersRes = await axios.get(`${API_BASE}/api/customers`);
                 setCustomers(customersRes.data as Customer[]);
 
                 // Get personnel
-                const personnelRes = await axios.get('http://localhost:8080/api/personnel');
+                const personnelRes = await axios.get(`${API_BASE}/api/personnel`);
                 setPersonnel(personnelRes.data as Personnel[]);
 
                 // Get statuses
-                const statusesRes = await axios.get('http://localhost:8080/api/protocol-statuses');
+                const statusesRes = await axios.get(`${API_BASE}/api/protocol-statuses`);
                 const transformedStatuses = statusesRes.data.map((status: any) => ({
                     ...status,
                     color: status.color || getDefaultColorForStatus(status.status_name)
@@ -113,15 +113,15 @@ const ProtocolPage: React.FC = () => {
 
         try {
             // Get protocol history
-            const historyRes = await axios.get(`http://localhost:8080/api/protocols/${protocol.protocol_id}/history`);
+            const historyRes = await axios.get(`${API_BASE}/api/protocols/${protocol.protocol_id}/history`);
             setProtocolHistory(historyRes.data);
 
             // Get protocol attachments
-            const attachmentsRes = await axios.get(`http://localhost:8080/api/protocols/${protocol.protocol_id}/attachments`);
+            const attachmentsRes = await axios.get(`${API_BASE}/api/protocols/${protocol.protocol_id}/attachments`);
             setProtocolAttachments(attachmentsRes.data);
 
             // Get protocol reminders
-            const remindersRes = await axios.get(`http://localhost:8080/api/protocols/${protocol.protocol_id}/reminders`);
+            const remindersRes = await axios.get(`${API_BASE}/api/protocols/${protocol.protocol_id}/reminders`);
             setProtocolReminders(remindersRes.data);
         } catch (error) {
             console.error('Error loading protocol details:', error);
@@ -142,7 +142,7 @@ const ProtocolPage: React.FC = () => {
 
             if (isEditing && selectedProtocol) {
                 // Update existing protocol
-                await axios.put(`http://localhost:8080/api/protocols/${selectedProtocol.protocol_id}`, processedValues);
+                await axios.put(`${API_BASE}/api/protocols/${selectedProtocol.protocol_id}`, processedValues);
                 message.success('Protocolo atualizado com sucesso!');
 
                 // Update local state
@@ -151,7 +151,7 @@ const ProtocolPage: React.FC = () => {
                 ));
             } else {
                 // Create new protocol
-                const response = await axios.post('http://localhost:8080/api/protocols', processedValues);
+                const response = await axios.post(`${API_BASE}/api/protocols`, processedValues);
                 message.success('Protocolo criado com sucesso!');
 
                 // Add to local state
@@ -177,7 +177,7 @@ const ProtocolPage: React.FC = () => {
             };
 
             const response = await axios.post(
-                `http://localhost:8080/api/protocols/${selectedProtocol.protocol_id}/reminders`,
+                `${API_BASE}/api/protocols/${selectedProtocol.protocol_id}/reminders`,
                 reminderData
             );
 
@@ -204,10 +204,10 @@ const ProtocolPage: React.FC = () => {
             };
 
             // Create history entry
-            const response = await axios.post('http://localhost:8080/api/protocol-history', historyData);
+            const response = await axios.post(`${API_BASE}/api/protocol-history`, historyData);
 
             // Update protocol status
-            await axios.put(`http://localhost:8080/api/protocols/${selectedProtocol.protocol_id}`, {
+            await axios.put(`${API_BASE}/api/protocols/${selectedProtocol.protocol_id}`, {
                 status_id: values.new_status_id
             });
 
@@ -244,7 +244,7 @@ const ProtocolPage: React.FC = () => {
 
         try {
             const response = await axios.post(
-                `http://localhost:8080/api/protocols/${selectedProtocol.protocol_id}/attachments`,
+                `${API_BASE}/api/protocols/${selectedProtocol.protocol_id}/attachments`,
                 formData
             );
 
@@ -261,7 +261,7 @@ const ProtocolPage: React.FC = () => {
     // Handle marking a reminder as sent
     const handleMarkReminderSent = async (reminder: ProtocolReminder) => {
         try {
-            await axios.put(`http://localhost:8080/api/reminders/${reminder.reminder_id}/mark-sent`);
+            await axios.put(`${API_BASE}/api/reminders/${reminder.reminder_id}/mark-sent`);
 
             // Update local state
             setProtocolReminders(protocolReminders.map(r =>
@@ -278,7 +278,7 @@ const ProtocolPage: React.FC = () => {
     // Handle reminder deletion
     const handleDeleteReminder = async (id: number) => {
         try {
-            await axios.delete(`http://localhost:8080/api/reminders/${id}`);
+            await axios.delete(`${API_BASE}/api/reminders/${id}`);
             setProtocolReminders(protocolReminders.filter(r => r.reminder_id !== id));
             message.success('Lembrete removido com sucesso!');
         } catch (error) {
@@ -290,7 +290,7 @@ const ProtocolPage: React.FC = () => {
     // Handle attachment deletion
     const handleDeleteAttachment = async (id: number) => {
         try {
-            await axios.delete(`http://localhost:8080/api/attachments/${id}`);
+            await axios.delete(`${API_BASE}/api/attachments/${id}`);
             setProtocolAttachments(protocolAttachments.filter(a => a.attachment_id !== id));
             message.success('Arquivo removido com sucesso!');
         } catch (error) {
@@ -302,7 +302,7 @@ const ProtocolPage: React.FC = () => {
     // Handle protocol deletion
     const handleDeleteProtocol = async (id: number) => {
         try {
-            await axios.delete(`http://localhost:8080/api/protocols/${id}`);
+            await axios.delete(`${API_BASE}/api/protocols/${id}`);
             setProtocols(protocols.filter(p => p.protocol_id !== id));
             message.success('Protocolo removido com sucesso!');
         } catch (error) {

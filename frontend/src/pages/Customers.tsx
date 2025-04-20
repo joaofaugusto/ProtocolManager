@@ -13,7 +13,7 @@ const CustomerPage: React.FC = () => {
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
     const [form] = Form.useForm();
-
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     // Fetch customers and branches data
     useEffect(() => {
         const fetchData = async () => {
@@ -21,7 +21,7 @@ const CustomerPage: React.FC = () => {
                 setLoading(true);
 
                 try {
-                    const branchesRes = await axios.get('http://localhost:8080/api/branches');
+                    const branchesRes = await axios.get(`${API_BASE}/api/branches`);
                     setBranches(branchesRes.data);
                 } catch (error) {
                     console.error('Error fetching branches:', error);
@@ -30,7 +30,7 @@ const CustomerPage: React.FC = () => {
                 }
 
                 try {
-                    const customersRes = await axios.get('http://localhost:8080/api/customers');
+                    const customersRes = await axios.get(`${API_BASE}/api/customers`);
                     setCustomers(customersRes.data);
                 } catch (error) {
                     console.error('Error fetching customers:', error);
@@ -72,7 +72,7 @@ const CustomerPage: React.FC = () => {
     const handleSubmit = async (values: any) => {
         try {
             if (isEditing && currentCustomer) {
-                await axios.put(`http://localhost:8080/api/customers/${currentCustomer.customer_id}`, values);
+                await axios.put(`${API_BASE}/api/customers/${currentCustomer.customer_id}`, values);
                 message.success('Customer updated successfully');
 
                 // Update local state
@@ -80,7 +80,7 @@ const CustomerPage: React.FC = () => {
                     c.customer_id === currentCustomer.customer_id ? { ...c, ...values } : c
                 ));
             } else {
-                const response = await axios.post('http://localhost:8080/api/customers', values);
+                const response = await axios.post(`${API_BASE}/api/customers`, values);
                 message.success('Customer added successfully');
 
                 // Add to local state
@@ -96,7 +96,7 @@ const CustomerPage: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axios.delete(`http://localhost:8080/api/customers/${id}`);
+            await axios.delete(`${API_BASE}/api/customers/${id}`);
             message.success('Customer deleted successfully');
 
             // Update local state
@@ -110,7 +110,7 @@ const CustomerPage: React.FC = () => {
     const toggleActive = async (record: Customer) => {
         try {
             const updatedRecord = { ...record, active: !record.active };
-            await axios.put(`http://localhost:8080/api/customers/${record.customer_id}`, updatedRecord);
+            await axios.put(`${API_BASE}/api/customers/${record.customer_id}`, updatedRecord);
 
             // Update local state
             setCustomers(customers.map(c =>

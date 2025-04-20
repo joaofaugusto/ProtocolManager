@@ -1,8 +1,8 @@
 // src/services/branchService.ts
 import axios from 'axios';
 import { Branch } from '../types/types';
-
-const API_URL = 'http://localhost:8080/api';
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
+const API_URL = `${API_BASE}/api`;
 
 export const getBranches = async (): Promise<Branch[]> => {
     try {

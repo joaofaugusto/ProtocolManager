@@ -60,7 +60,7 @@ const ProtocolDetail: React.FC = () => {
     const [statuses, setStatuses] = useState<ProtocolStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [personnel, setPersonnel] = useState<Personnel[]>([]);
-
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     useEffect(() => {
         // In a real app, fetch actual data from your API
         setTimeout(() => {

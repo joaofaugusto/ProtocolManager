@@ -15,15 +15,15 @@ const PersonnelPage: React.FC = () => {
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [currentPersonnel, setCurrentPersonnel] = useState<Personnel | null>(null);
     const [form] = Form.useForm();
-
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     // Fetch personnel and branches data
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
                 const [personnelResponse, branchesResponse] = await Promise.all([
-                    fetch('http://localhost:8080/api/personnel'),  // Use full URL with port
-                    fetch('http://localhost:8080/api/branches')    // Use full URL with port
+                    fetch(`${API_BASE}/api/personnel`),  // Use full URL with port
+                    fetch(`${API_BASE}/api/branches`)    // Use full URL with port
                 ]);
 
                 // Check for success before parsing JSON
@@ -70,7 +70,7 @@ const PersonnelPage: React.FC = () => {
     const handleSubmit = async (values: any) => {
         try {
             if (isEditing && currentPersonnel) {
-                await axios.put(`http://localhost:8080/api/personnel/${currentPersonnel.personnel_id}`, values);
+                await axios.put(`${API_BASE}/api/personnel/${currentPersonnel.personnel_id}`, values);
                 message.success('Personnel updated successfully');
 
                 // Update local state
@@ -78,7 +78,7 @@ const PersonnelPage: React.FC = () => {
                     p.personnel_id === currentPersonnel.personnel_id ? { ...p, ...values } : p
                 ));
             } else {
-                const response = await axios.post('http://localhost:8080/api/personnel', values);
+                const response = await axios.post(`${API_BASE}/api/personnel`, values);
                 message.success('Personnel added successfully');
 
                 // Add to local state
@@ -94,7 +94,7 @@ const PersonnelPage: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axios.delete(`http://localhost:8080/api/personnel/${id}`);
+            await axios.delete(`${API_BASE}/api/personnel/${id}`);
             message.success('Personnel deleted successfully');
 
             // Update local state
@@ -108,7 +108,7 @@ const PersonnelPage: React.FC = () => {
     const toggleActive = async (record: Personnel) => {
         try {
             const updatedRecord = { ...record, active: !record.active };
-            await axios.put(`http://localhost:8080/api/personnel/${record.personnel_id}`, updatedRecord);
+            await axios.put(`${API_BASE}/api/personnel/${record.personnel_id}`, updatedRecord);
 
             // Update local state
             setPersonnel(personnel.map(p =>
