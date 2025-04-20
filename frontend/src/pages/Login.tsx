@@ -56,7 +56,7 @@ export default function LoginPage() {
         setLoading(true);
         try {
             if (isRegistering) {
-                const response = await axios.post(`${API_BASE}/api/login`, values);
+                const response = await axios.post(`${API_BASE}/api/register`, values);
                 message.success('Cadastro realizado com sucesso!');
                 setIsRegistering(false);
             } else {
